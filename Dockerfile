@@ -5,10 +5,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 COPY --chown=10001:10001 server.py index.html ./
-RUN mkdir -p /data && chown 10001:10001 /data
+RUN mkdir -p /config && chown 10001:10001 /config
 
 USER 10001:10001
 EXPOSE 8080
-VOLUME ["/data"]
+VOLUME ["/config"]
 
-CMD ["python", "/app/server.py", "--host", "0.0.0.0", "--config", "/data/config.toml"]
+CMD ["python", "/app/server.py", "--config", "/config/config.toml"]

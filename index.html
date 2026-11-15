@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f3f5f9">
+<title>vnStat Dashboard</title>
+<!--BOOT-->
+<script>
+/* Theme bootstrap: runs before first paint so there is no flash, and keeps the browser chrome
+   (Safari toolbar / tab bar) tinted with the page background via <meta name="theme-color">. */
+(function () {
+  const THEMES = /*THEMES-START*/{
+    default: { name: "Default",
+      light: {bg:"#f3f5f9",card:"#ffffff",fg:"#0f172a",fg2:"#334155",mut:"#5b6b82",line:"#e2e8f0",rx:"#2563eb",tx:"#7c3aed",acc:"#2563eb",onacc:"#ffffff"},
+      dark:  {bg:"#0a0e16",card:"#121826",fg:"#f1f5fb",fg2:"#cbd5e4",mut:"#9aa7bc",line:"#263042",rx:"#5aa2ff",tx:"#d890ff",acc:"#5aa2ff",onacc:"#06101f"} },
+    nord: { name: "Nord",
+      light: {bg:"#e5e9f0",card:"#f8f9fb",fg:"#2e3440",fg2:"#434c5e",mut:"#56627a",line:"#d3dae6",rx:"#3f6a96",tx:"#8c4a82",acc:"#3f6a96",onacc:"#ffffff"},
+      dark:  {bg:"#2b303b",card:"#353c4a",fg:"#eceff4",fg2:"#d8dee9",mut:"#aab4c6",line:"#4c566a",rx:"#88c0d0",tx:"#d6a5cf",acc:"#88c0d0",onacc:"#232831"} },
+    dracula: { name: "Dracula",
+      light: {bg:"#f3eedd",card:"#fffcf0",fg:"#1f1f1f",fg2:"#383838",mut:"#58564e",line:"#e0d9c0",rx:"#036a96",tx:"#a3144d",acc:"#644ac9",onacc:"#ffffff"},
+      dark:  {bg:"#21222c",card:"#2b2d3a",fg:"#f8f8f2",fg2:"#dcdcd2",mut:"#a9b0cc",line:"#44475a",rx:"#8be9fd",tx:"#ff79c6",acc:"#bd93f9",onacc:"#1d1e26"} },
+    solarized: { name: "Solarized",
+      light: {bg:"#fdf6e3",card:"#fffcf2",fg:"#073642",fg2:"#2f4f58",mut:"#586e75",line:"#e8e0c8",rx:"#1c6fae",tx:"#b5307a",acc:"#1c6fae",onacc:"#ffffff"},
+      dark:  {bg:"#00252e",card:"#073642",fg:"#fdf6e3",fg2:"#e1dac6",mut:"#9fb1b2",line:"#17505c",rx:"#4aa8e8",tx:"#e2589c",acc:"#4aa8e8",onacc:"#00212a"} },
+    gruvbox: { name: "Gruvbox",
+      light: {bg:"#fbf1c7",card:"#fdf7dc",fg:"#3c3836",fg2:"#504945",mut:"#665c54",line:"#e3d5a8",rx:"#076678",tx:"#8f3f71",acc:"#076678",onacc:"#fbf1c7"},
+      dark:  {bg:"#232323",card:"#32302f",fg:"#ebdbb2",fg2:"#d5c4a1",mut:"#b0a08a",line:"#504945",rx:"#83a598",tx:"#e08aa4",acc:"#fabd2f",onacc:"#232323"} },
+    catppuccin: { name: "Catppuccin",
+      light: {bg:"#eff1f5",card:"#ffffff",fg:"#3d3f57",fg2:"#4e5169",mut:"#646780",line:"#dce0e8",rx:"#1e66f5",tx:"#c2410c",acc:"#1e66f5",onacc:"#ffffff"},
+      dark:  {bg:"#181825",card:"#1e1e2e",fg:"#cdd6f4",fg2:"#bac2de",mut:"#a6adc8",line:"#363a4f",rx:"#89b4fa",tx:"#fab387",acc:"#cba6f7",onacc:"#181825"} }
+  }/*THEMES-END*/;
+  const rgba = (h, a) => { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+  let css = "";
+  for (const [id, t] of Object.entries(THEMES)) for (const m of ["light", "dark"]) {
+    const c = t[m], dk = m === "dark";
+    css += `:root[data-theme="${id}"][data-mode="${m}"]{` +
+      Object.entries(c).map(([k, v]) => `--${k}:${v}`).join(";") +
+      `;--hover:${rgba(c.mut, .16)};--shadow:${dk ? "0 1px 2px rgba(0,0,0,.45),0 8px 24px rgba(0,0,0,.28)" : "0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06)"}}`;
+  }
+  const st = document.createElement("style"); st.id = "theme-css"; st.textContent = css; document.head.appendChild(st);
+  const mq = matchMedia("(prefers-color-scheme: dark)");
+  function apply() {
+    let s = {}; try { s = JSON.parse(localStorage.getItem("vnstat:settings") || "{}"); } catch (e) {}
+    const theme = THEMES[s.theme] ? s.theme : "default", ap = s.appearance || "auto";
+    const mode = ap === "dark" || (ap === "auto" && mq.matches) ? "dark" : "light";
+    const r = document.documentElement;
+    r.dataset.theme = theme; r.dataset.mode = mode; r.style.colorScheme = mode;
+    const set = (n, v) => { let m = document.querySelector(`meta[name="${n}"]`); if (!m) { m = document.createElement("meta"); m.name = n; document.head.appendChild(m); } m.content = v; };
+    set("theme-color", THEMES[theme][mode].bg);
+    set("color-scheme", mode);
+  }
+  window.__THEMES = THEMES; window.__applyTheme = apply;
+  mq.addEventListener("change", () => { apply(); window.dispatchEvent(new Event("themechange")); });
+  apply();
+})();
+</script>
+<style>
+:root{--font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 var(--font);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;min-height:100vh}
+main{max-width:1120px;margin:0 auto;padding:20px 16px 48px;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+select,button,input{font:inherit;color:var(--fg)}
+select,input[type=text],input[type=url]{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;min-width:0}
+select:hover,input:hover{border-color:var(--mut)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button{cursor:pointer}
+button:disabled{cursor:default;opacity:.55}
+.btn{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 12px;display:inline-flex;align-items:center;gap:7px}
+.btn:hover:not(:disabled){border-color:var(--mut)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--onacc);font-weight:600}
+.btn svg{flex:none}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.brand{display:flex;align-items:baseline;gap:8px}
+h1{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0}
+.mut{color:var(--mut)}
+.status{color:var(--mut);font-size:12px;display:flex;align-items:center;gap:7px}
+.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.2);flex:none}
+.dot.stale{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.2)}
+.dot.bad{background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.2)}
+
+:root{--ctl-h:40px}
+.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px 12px;margin-bottom:16px}
+.tl,.tr2{display:flex;gap:8px;align-items:center;min-width:0}
+.tr2{justify-content:flex-end}
+.tc{justify-self:center;max-width:100%;overflow-x:auto}
+@media (max-width:860px){.toolbar{grid-template-columns:minmax(0,1fr) auto}.tc{grid-column:1/-1;grid-row:2}}
+.seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:4px 11px;border-radius:7px;color:var(--fg2)}
+.seg button:hover{background:var(--hover)}
+.seg button.on{background:var(--acc);color:var(--onacc);font-weight:600}
+.toolbar .seg{height:var(--ctl-h);flex-wrap:nowrap}
+.toolbar .seg button{padding:0 14px;white-space:nowrap}
+.toolbar .btn{height:var(--ctl-h)}
+.ibtn{width:var(--ctl-h);padding:0;justify-content:center}
+.pick{position:relative;display:inline-flex;min-width:96px;flex:0 1 auto;max-width:100%;align-items:center;height:var(--ctl-h);border:1.5px solid var(--acc);border-radius:10px;background:var(--card);background:color-mix(in srgb,var(--acc) 12%,var(--card));cursor:pointer}
+#w-iface{flex-shrink:20}
+.pick:hover{border-color:var(--fg2)}
+.pick:focus-within{outline:2px solid var(--acc);outline-offset:2px}
+.pick .ic{position:absolute;left:11px;display:flex;color:var(--acc);pointer-events:none}
+.pick::after{content:"";position:absolute;right:14px;top:50%;width:6px;height:6px;border-right:2px solid var(--fg2);border-bottom:2px solid var(--fg2);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.pick select{appearance:none;-webkit-appearance:none;border:0;background:transparent;height:100%;padding:0 36px 0 37px;font-weight:650;font-size:14px;border-radius:10px;cursor:pointer;color:var(--fg);width:100%;min-width:0;text-overflow:ellipsis}
+.pick select:hover{border:0}
+.pick select:focus-visible{outline:none}
+.notice{background:var(--card);border:1px solid #ef4444;color:var(--fg);border-left-width:4px;border-radius:12px;padding:10px 14px;margin-bottom:16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px 12px;box-shadow:var(--shadow);min-height:86px;position:relative;overflow:hidden}
+.card.rx::before,.card.tx::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rx)}
+.card.tx::before{background:var(--tx)}
+.card small{display:block;color:var(--fg2);font-size:12.5px;font-weight:600;letter-spacing:.01em}
+.card b{display:block;color:var(--fg);font-size:23px;font-weight:700;letter-spacing:-.02em;margin-top:1px;line-height:1.25}
+.card span{display:block;color:var(--mut);font-size:12px;margin-top:1px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:16px}
+.grid{display:grid;gap:16px;margin-bottom:16px}
+.grid.a{grid-template-columns:2fr 1fr}
+.grid.b{grid-template-columns:1fr 1fr}
+.grid>.panel{margin-bottom:0;min-width:0}
+@media (max-width:780px){.grid.a,.grid.b{grid-template-columns:1fr}}
+.panel h2{font-size:14px;font-weight:650;margin:0}
+.sub{color:var(--mut);font-size:12px;margin:1px 0 10px}
+.phead{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:flex-start}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cv{position:relative}
+canvas{display:block;width:100%;touch-action:pan-y}
+canvas.sel{cursor:crosshair}
+canvas.big{height:330px}
+canvas.mid{height:230px}
+.tip{position:absolute;pointer-events:none;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:12px;box-shadow:var(--shadow);display:none;white-space:nowrap;z-index:5}
+.tt{font-weight:650;margin-bottom:5px}
+.tr{display:flex;align-items:center;gap:8px}
+.tr i,.legend i,.dl i{display:inline-block;width:9px;height:9px;border-radius:3px;flex:none}
+.tr b{margin-left:auto;padding-left:14px;font-weight:600}
+.tf{color:var(--mut);margin-top:5px;padding-top:5px;border-top:1px solid var(--line)}
+.legend{display:flex;gap:16px;margin-top:10px;color:var(--fg2);font-size:12px}
+.legend span{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
+.legend span.off{opacity:.45;text-decoration:line-through}
+.dl{display:grid;gap:6px;margin-top:8px;font-size:13px}
+.dl div{display:flex;align-items:center;gap:8px}
+.dl b{margin-left:auto;font-weight:600}
+.dl em{font-style:normal;color:var(--mut);min-width:48px;text-align:right}
+.selbar{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);min-height:44px}
+.selbar .hint{color:var(--mut);font-size:12.5px}
+.selhead{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;margin-bottom:8px}
+.selhead b{font-weight:650}
+.selgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.selgrid div{background:var(--hover);border-radius:10px;padding:7px 10px}
+.selgrid small{display:block;color:var(--fg2);font-size:11.5px;font-weight:600}
+.selgrid b{font-size:15px;font-weight:650}
+.selgrid span{display:block;color:var(--mut);font-size:11.5px}
+
+.tablebox{max-height:420px;overflow:auto;margin-top:2px;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:separate;border-spacing:0}
+th,td{text-align:right;padding:8px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{position:sticky;top:0;z-index:1;background:var(--card);color:var(--fg2);font-weight:650;font-size:12px;cursor:pointer;user-select:none}
+thead th:hover{color:var(--fg)}
+thead th i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+tbody tr:hover td{background:var(--hover)}
+tbody tr:last-child td{border-bottom:0}
+tfoot td{position:sticky;bottom:0;background:var(--card);font-weight:650;border-top:2px solid var(--line);border-bottom:0}
+td.num{font-variant-numeric:tabular-nums}
+th:nth-child(n+2),td:nth-child(n+2){width:20%}
+.life{display:grid;grid-template-columns:minmax(210px,auto) 1fr;gap:10px 32px;align-items:center;border:1px dashed var(--line);border-radius:14px;padding:12px 18px;margin-bottom:16px}
+.life:empty{display:none}
+.life small{display:block;color:var(--fg2);font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.06em}
+.life b{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.life .mut{font-size:12px}
+.lbar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--line);gap:2px}
+.lbar i{display:block;height:100%}
+.lk{display:flex;flex-wrap:wrap;gap:4px 22px;margin-top:8px;font-size:12.5px;color:var(--fg2)}
+.lk span{display:flex;align-items:center;gap:6px}
+.lk i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.lk b{display:inline;font-size:inherit;font-weight:650;color:var(--fg);letter-spacing:0;line-height:inherit}
+@media (max-width:640px){.life{grid-template-columns:1fr}}
+.hat{background:repeating-linear-gradient(135deg,var(--mut) 0 1.5px,transparent 1.5px 4px);opacity:.75}
+.legend span.static{cursor:default}
+@keyframes sh{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.skel{background:linear-gradient(90deg,var(--line) 25%,var(--hover) 50%,var(--line) 75%);background-size:800px 100%;animation:sh 1.3s infinite linear;border-radius:10px;border-color:transparent}
+.ph{display:none;position:absolute;inset:0}
+body:not(.ready) .ph{display:block}
+body:not(.ready) canvas{visibility:hidden}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:50}
+.toast.show{opacity:1;transform:translateX(-50%)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin svg{animation:spin .8s linear infinite}
+/* settings dialog */
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--fg);padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 32px);box-shadow:0 20px 60px rgba(0,0,0,.4)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.dh{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:2}
+.dh h2{margin:0;font-size:17px}
+.db{padding:6px 18px 18px;overflow:auto;max-height:calc(100vh - 140px)}
+.db h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg2);margin:18px 0 8px}
+.row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
+.row>label{color:var(--fg2);min-width:120px}
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
+.theme{border:2px solid var(--line);background:var(--card);border-radius:12px;padding:8px;text-align:left;display:block}
+.theme[aria-pressed=true]{border-color:var(--acc)}
+.theme .sw{height:46px;border-radius:8px;display:flex;align-items:flex-end;gap:5px;padding:6px;border:1px solid rgba(128,128,128,.25)}
+.theme .sw i{display:block;height:100%;border-radius:4px}
+.theme span{display:block;margin-top:6px;font-weight:600}
+.srv{display:grid;grid-template-columns:1fr 2fr auto;gap:8px;margin-bottom:8px}
+.srv input{width:100%}
+@media (max-width:560px){.srv{grid-template-columns:1fr auto}.srv .u{grid-column:1/-1;order:3}}
+.ifr{display:grid;grid-template-columns:minmax(80px,auto) 1fr;gap:8px;align-items:center;margin-bottom:8px}
+.ifr code{color:var(--fg2)}
+.msg{font-size:13px;margin-top:8px;min-height:18px}
+.msg.err{color:#ef4444}
+.msg.ok{color:#22c55e}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="brand"><h1>vnStat</h1><span class="mut" id="ver"></span></div>
+  <div class="status"><span class="dot stale" id="dot"></span><span id="status">Loading…</span></div>
+</header>
+
+<div class="toolbar">
+  <div class="tl">
+    <label class="pick" id="w-server" hidden title="Server"><span class="ic" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01"/></svg></span><select id="server" aria-label="Server"></select></label>
+    <label class="pick" id="w-iface" title="Network interface"><span class="ic" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V5M3.5 8.5 7 5l3.5 3.5M17 4v15M13.5 15.5 17 19l3.5-3.5"/></svg></span><select id="iface" aria-label="Interface"></select></label>
+  </div>
+  <div class="tc"><div class="seg" id="tabs" role="group" aria-label="Period"></div></div>
+  <div class="tr2">
+    <button class="btn ibtn" id="reload" title="Refresh now" aria-label="Refresh now"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg></button>
+    <button class="btn ibtn" id="open-settings" title="Settings" aria-label="Settings" aria-haspopup="dialog"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h8M18 6h2M4 12h2M12 12h8M4 18h10M20 18h0"/><circle cx="15" cy="6" r="2.2"/><circle cx="9" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/></svg></button>
+  </div>
+</div>
+
+<div class="notice" id="err" hidden></div>
+<div class="cards" id="cards">
+  <div class="card skel"></div><div class="card skel"></div><div class="card skel"></div>
+  <div class="card skel"></div><div class="card skel"></div>
+</div>
+<div class="life" id="life"></div>
+
+<section class="panel">
+  <div class="phead">
+    <div><h2>Traffic</h2><div class="sub" id="sub-main">&nbsp;</div></div>
+    <div class="ctl">
+      <div class="seg" id="ranges" role="group" aria-label="Time range"></div>
+      <div class="seg" role="group" aria-label="Chart style"><button id="mstack" class="on">Bars</button><button id="mline">Lines</button></div>
+    </div>
+  </div>
+  <div class="cv"><canvas id="c-main" class="big"></canvas><div class="tip"></div><div class="ph skel"></div></div>
+  <div class="legend">
+    <span id="lrx"><i style="background:var(--rx)"></i>Download</span>
+    <span id="ltx"><i style="background:var(--tx)"></i>Upload</span>
+    <span id="lgap" class="static" hidden><i class="hat"></i>No data recorded</span>
+  </div>
+</section>
+
+<div class="grid a">
+  <section class="panel">
+    <h2>Cumulative transfer</h2><div class="sub">Running total over the selected range. Drag to measure a span.</div>
+    <div class="cv"><canvas id="c-cum" class="mid sel"></canvas><div class="tip"></div><div class="ph skel"></div></div>
+    <div class="selbar" id="selbar"></div>
+  </section>
+  <section class="panel">
+    <h2>Download vs upload</h2><div class="sub">Share of the selected range</div>
+    <div class="cv"><canvas id="c-donut" class="mid"></canvas><div class="ph skel"></div></div>
+    <div class="dl" id="donut-legend"></div>
+  </section>
+</div>
+
+<div class="grid b">
+  <section class="panel" id="p-hod">
+    <h2>Typical day</h2><div class="sub">Average traffic per hour of day (from hourly data)</div>
+    <div class="cv"><canvas id="c-hod" class="mid"></canvas><div class="tip"></div><div class="ph skel"></div></div>
+  </section>
+  <section class="panel" id="p-dow">
+    <h2>Typical week</h2><div class="sub">Average traffic per weekday (from daily data)</div>
+    <div class="cv"><canvas id="c-dow" class="mid"></canvas><div class="tip"></div><div class="ph skel"></div></div>
+  </section>
+</div>
+
+<section class="panel">
+  <h2>Details</h2>
+  <div class="sub" id="sub-det">&nbsp;</div>
+  <div class="tablebox"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody><tfoot id="tfoot"></tfoot></table></div>
+</section>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<dialog id="dlg" aria-labelledby="dlg-title">
+  <div class="dh"><h2 id="dlg-title">Settings</h2><button class="btn" id="dlg-close">Done</button></div>
+  <div class="db">
+    <h3>Appearance</h3>
+    <div class="row"><label>Mode</label><div class="seg" id="ap" role="group"><button data-v="auto">Auto (system)</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
+    <div class="themes" id="themes"></div>
+
+    <h3>Display</h3>
+    <div class="row"><label for="s-units">Units</label><select id="s-units"><option value="iec">GiB (1024)</option><option value="si">GB (1000)</option></select></div>
+    <div class="row"><label for="s-refresh">Auto refresh</label><select id="s-refresh"><option value="0">Manual only</option><option value="10">Every 10s</option><option value="30">Every 30s</option><option value="60">Every minute</option><option value="300">Every 5 minutes</option></select></div>
+    <div class="row"><label for="s-rel">Relative dates</label><label><input type="checkbox" id="s-rel"> “Today”, “Yesterday”, “This month”</label></div>
+
+    <h3>Servers</h3>
+    <div class="mut" style="font-size:12px;margin:-2px 0 8px">Each server is a vnStat database file (like <code>/data/vnstat.db</code>, read on the machine running this dashboard) or a vnStat <code>json.cgi</code> URL.</div>
+    <div id="srvlist"></div>
+    <button class="btn" id="add-srv">+ Add server</button>
+
+    <h3>Interface names <span class="mut" id="if-for" style="text-transform:none;letter-spacing:0"></span></h3>
+    <div id="iflist"></div>
+
+    <div class="row" style="margin-top:14px"><button class="btn pri" id="save-cfg">Save servers &amp; names</button><span class="msg" id="cfgmsg" role="status"></span></div>
+    <div class="mut" style="font-size:12px">Saved to the server's config file, so every browser sees the same servers and names. Theme, units and the rest are remembered in this browser only.</div>
+  </div>
+</dialog>
+
+<script>
+const $ = id => document.getElementById(id);
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DOW = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const PERIODS = {fiveminute:"5 min", hour:"Hourly", day:"Daily", month:"Monthly", year:"Yearly"};
+/* def: default number of buckets (0 = everything). presets: [chip label, buckets] */
+const RANGES = {
+  fiveminute:{def:72,  presets:[["1H",12],["6H",72],["12H",144],["24H",288]]},
+  hour:      {def:48,  presets:[["12H",12],["24H",24],["48H",48],["7D",168]]},
+  day:       {def:30,  presets:[["7D",7],["30D",30],["90D",90],["1Y",365]]},
+  month:     {def:12,  presets:[["3M",3],["6M",6],["12M",12],["2Y",24]]},
+  year:      {def:0,   presets:[]}
+};
+const DEF = {theme:"default", appearance:"auto", units:"iec", rel:true, refresh:30, mode:"stack", server:"", iface:{}, period:"day", range:{}};
+const lsGet = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
+const lsSet = (k,v) => { try { localStorage.setItem(k,v) } catch (e) {} };
+function loadSet(){ try { return Object.assign({}, DEF, JSON.parse(lsGet("vnstat:settings") || "{}")) } catch (e) { return {...DEF} } }
+const S = {set:loadSet(), period:"day", config:window.__CONFIG__ || {servers:[]}, server:null, data:null, iface:null, rows:[],
+           show:{rx:true,tx:true}, sort:{k:"t",d:-1}, donut:null, sel:null,
+           stamp:0, stale:false, failing:false, err:"", inflight:null, ac:null, lastDone:0, nextAt:0, timer:0, cd:0};
+const saveSet = () => lsSet("vnstat:settings", JSON.stringify(S.set));
+const p2 = n => String(n).padStart(2,"0");
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const plural = (n,w) => `${(+n).toLocaleString()} ${w}${n===1?"":"s"}`;
+
+/* ---------- formatting ---------- */
+const UNITS = () => S.set.units==="iec" ? {base:1024,u:["B","KiB","MiB","GiB","TiB","PiB"]} : {base:1000,u:["B","kB","MB","GB","TB","PB"]};
+const decFor = (i,d) => i<=2 ? 0 : d;                       // B, KB and MB are whole numbers; GB and up keep decimals
+function fmt(b, d=2, exact=false){
+  const {base,u}=UNITS(); let i=0; while (b>=base && i<u.length-1){ b/=base; i++ }
+  return b.toFixed(exact ? (i===0?0:d) : decFor(i,d)) + " " + u[i];
+}
+function ftick(b){                                           // axis ticks keep their decimals so ticks never repeat
+  const [n,u] = fmt(b,2,true).split(" ");
+  return (n.includes(".") ? n.replace(/0+$/,"").replace(/\.$/,"") : n) + " " + u;
+}
+/* Download / Upload / Total shown in the total's unit, rounded first, so the three always add up. */
+function trio(rx,tx){
+  const {base,u}=UNITS(); let i=0, t=rx+tx; while (t>=base && i<u.length-1){ t/=base; i++ }
+  const dec=decFor(i,2), s=Math.pow(base,i), k=Math.pow(10,dec), r=v=>Math.round(v/s*k)/k;
+  const a=r(rx), b=r(tx), out=v=>v.toFixed(dec)+" "+u[i];
+  return [out(a),out(b),out(a+b)];
+}
+const t12 = (h,m) => `${h%12||12}:${p2(m)}${h<12?"AM":"PM"}`;
+const h12 = h => `${h%12||12}${h<12?"AM":"PM"}`;
+const dstr = d => `${MON[d.month-1]} ${d.day}, ${d.year}`;
+const stampStr = dt => `${MON[dt.getMonth()]} ${dt.getDate()}, ${dt.getFullYear()} ${t12(dt.getHours(),dt.getMinutes())}`;
+function dayDiff(d){
+  const n = new Date(), a = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  return Math.round((new Date(d.year, d.month-1, d.day) - a) / 864e5);
+}
+function dateText(d,abs){
+  if (S.set.rel && !abs) { const x = dayDiff(d); if (x===0) return "Today"; if (x===-1) return "Yesterday"; }
+  return dstr(d);
+}
+function label(e,p,abs){
+  const d=e.date, t=e.time, n=new Date(), rel=S.set.rel && !abs;
+  if (p==="year") return rel && d.year===n.getFullYear() ? "This year" : rel && d.year===n.getFullYear()-1 ? "Last year" : String(d.year);
+  if (p==="month"){
+    if (rel){ const diff=(n.getFullYear()-d.year)*12+n.getMonth()+1-d.month; if(diff===0) return "This month"; if(diff===1) return "Last month"; }
+    return `${MON[d.month-1]} ${d.year}`;
+  }
+  if (p==="day") return dateText(d,abs);
+  return `${dateText(d,abs)} ${t12(t.hour,t.minute)}`;
+}
+/* "5 min ago", "2 hours ago", then Yesterday/date + time */
+function ago(t){
+  const sec=Math.max(0,Math.round((Date.now()-t)/1000));
+  if (sec<60) return "less than a minute ago";
+  const m=Math.floor(sec/60); if (m<60) return m+" min ago";
+  const h=Math.floor(m/60); if (h<24) return plural(h,"hour")+" ago";
+  const dt=new Date(t);
+  return `${dateText({year:dt.getFullYear(),month:dt.getMonth()+1,day:dt.getDate()})} ${t12(dt.getHours(),dt.getMinutes())}`;
+}
+function shortLabel(e,p){
+  const d=e.date, t=e.time;
+  if (p==="year") return String(d.year);
+  if (p==="month") return `${MON[d.month-1]} ’${String(d.year).slice(2)}`;
+  if (p==="day") return `${MON[d.month-1]} ${d.day}`;
+  if (t.hour===0 && t.minute===0) return `${MON[d.month-1]} ${d.day}`;
+  return p==="hour" ? h12(t.hour) : t12(t.hour,t.minute);
+}
+const ts = e => { const d=e.date, t=e.time||{hour:0,minute:0}; return new Date(d.year,(d.month||1)-1,d.day||1,t.hour,t.minute).getTime() };
+function spanText(p,n){
+  if (p==="fiveminute"){
+    const m=n*5; if (m<60) return plural(m,"minute");
+    const h=m/60; if (h<48) return plural(+h.toFixed(1),"hour");
+    return plural(+(h/24).toFixed(1),"day");
+  }
+  return plural(n,{hour:"hour",day:"day",month:"month",year:"year"}[p]);
+}
+
+/* ---------- time slots ----------
+   A range like "48 hours" means the real last 48 hours, not the last 48 records. Every slot in the window
+   exists; slots vnStat never recorded (daemon stopped, host offline) are flagged as missing. */
+const fields = t => { const d=new Date(t); return [d.getFullYear(),d.getMonth(),d.getDate(),d.getHours(),d.getMinutes()] };
+function addSlots(p,t,k){
+  const [y,mo,d,h,mi]=fields(t);
+  switch(p){
+    case "fiveminute": return new Date(y,mo,d,h,mi+5*k).getTime();
+    case "hour":       return new Date(y,mo,d,h+k).getTime();
+    case "day":        return new Date(y,mo,d+k).getTime();
+    case "month":      return new Date(y,mo+k,1).getTime();
+    default:           return new Date(y+k,0,1).getTime();
+  }
+}
+function floorSlot(p,t){
+  const [y,mo,d,h,mi]=fields(t);
+  switch(p){
+    case "fiveminute": return new Date(y,mo,d,h,mi-mi%5).getTime();
+    case "hour":       return new Date(y,mo,d,h).getTime();
+    case "day":        return new Date(y,mo,d).getTime();
+    case "month":      return new Date(y,mo,1).getTime();
+    default:           return new Date(y,0,1).getTime();
+  }
+}
+const entryOf = (p,t) => { const d=new Date(t); return {date:{year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate()}, time:{hour:d.getHours(),minute:d.getMinutes()}} };
+function countSlots(p,a,b){ let n=0,t=a; while (t<=b && n<200000){ n++; t=addSlots(p,t,1) } return n }
+function buildSlots(p,all,want){
+  const map=new Map(all.map(e=>[ts(e),e]));
+  const nowF=floorSlot(p,Date.now());
+  const firstT=all.length?ts(all[0]):nowF, endT=Math.max(nowF,all.length?ts(all[all.length-1]):nowF);
+  const total=countSlots(p,firstT,endT);
+  const isAll=!want||want>=total;
+  const slots=[]; let t=isAll?firstT:addSlots(p,endT,-(want-1));
+  while (t<=endT && slots.length<200000){ slots.push({t,e:map.get(t),cur:t>=nowF}); t=addSlots(p,t,1) }
+  return {slots,total,isAll};
+}
+const unitNoun = p => ({fiveminute:"5-min interval",hour:"hour",day:"day",month:"month",year:"year"})[p];
+const countNoun = (p,n) => `${n.toLocaleString()} ${unitNoun(p)}${n===1?"":"s"}`;
+function gapInfo(rows){
+  let missing=0,best=null,cur=null;
+  rows.forEach((r,i)=>{
+    if (r.missing){ missing++; if (!cur) cur={i0:i,n:0}; cur.n++; }
+    else if (cur){ if (!best||cur.n>best.n) best=cur; cur=null }
+  });
+  if (cur && (!best||cur.n>best.n)) best=cur;
+  return {missing,best:best&&{...best,i1:best.i0+best.n-1}};
+}
+
+/* ---------- canvas helpers ---------- */
+const niceMax = v => { if (v<=0) return 1; const e=Math.pow(10,Math.floor(Math.log10(v))), f=v/e; return (f<=1?1:f<=2?2:f<=5?5:10)*e };
+function axisMax(bytes){
+  const base = S.set.units==="iec" ? 1024 : 1000; let i=0, v=bytes;
+  while (v >= base && i < 5) { v /= base; i++ }
+  return niceMax(v) * Math.pow(base,i);
+}
+function hexA(h,a){
+  h = h.replace("#",""); if (h.length===3) h=[...h].map(c=>c+c).join("");
+  const n=parseInt(h,16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;
+}
+function prep(cv){
+  const dpr=devicePixelRatio||1, W=cv.clientWidth, H=cv.clientHeight;
+  if (!W||!H) return null;
+  cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
+  return {g,W,H};
+}
+function rtop(g,x,y,w,h,r){
+  if (h<=0) return; r=Math.min(r,w/2,h);
+  g.beginPath(); g.moveTo(x,y+h); g.lineTo(x,y+r); g.quadraticCurveTo(x,y,x+r,y);
+  g.lineTo(x+w-r,y); g.quadraticCurveTo(x+w,y,x+w,y+r); g.lineTo(x+w,y+h); g.closePath(); g.fill();
+}
+function curve(g,pts){
+  g.moveTo(pts[0][0],pts[0][1]);
+  for (let i=1;i<pts.length;i++){
+    const [x0,y0]=pts[i-1], [x1,y1]=pts[i], mx=(x0+x1)/2;
+    g.bezierCurveTo(mx,y0,mx,y1,x1,y1);
+  }
+}
+function tip(title,items,foot){
+  return `<div class="tt">${esc(title)}</div>` +
+    items.map(([c,n,v])=>`<div class="tr"><i style="background:var(${c})"></i><span>${n}</span><b>${v}</b></div>`).join("") +
+    (foot?`<div class="tf">${foot}</div>`:"");
+}
+
+/* ---------- bar / line chart (with optional drag-to-select) ---------- */
+class Chart{
+  constructor(cv, opts={}){
+    this.cv=cv; this.cfg=null; this.hover=-1; this.sel=null; this.drag=null; this.opts=opts;
+    this.tip=cv.parentElement.querySelector(".tip");
+    const idx = (e,clamp) => {
+      const g=this.geom; if (!g||!g.n) return -1;
+      const i=Math.floor((e.clientX-cv.getBoundingClientRect().left-g.L)/g.slot);
+      return clamp ? Math.max(0,Math.min(g.n-1,i)) : (i<0||i>=g.n ? -1 : i);
+    };
+    cv.addEventListener("pointerdown",e=>{
+      if (!opts.onSelect || (e.pointerType==="mouse" && e.button!==0)) return;
+      const i=idx(e,false); if (i<0) return;
+      this.drag={a:i,moved:false}; try{cv.setPointerCapture(e.pointerId)}catch(_){}
+    });
+    cv.addEventListener("pointermove",e=>{
+      if (!this.cfg||!this.geom||!this.geom.n) return;
+      if (this.drag){
+        const i=idx(e,true);
+        if (i!==this.drag.a) this.drag.moved=true;
+        if (this.drag.moved) opts.onSelect({i0:Math.min(this.drag.a,i),i1:Math.max(this.drag.a,i)});
+      }
+      const i=idx(e,false);
+      if (i<0) return this.hideTip();
+      if (i!==this.hover){ this.hover=i; this.draw() }
+      const r=cv.getBoundingClientRect(), x=e.clientX-r.left, g=this.geom;
+      this.tip.innerHTML=this.cfg.tip(this.cfg.rows[i]); this.tip.style.display="block";
+      const tw=this.tip.offsetWidth; let left=x+14; if (left+tw>g.W-4) left=x-tw-14;
+      this.tip.style.left=Math.max(0,left)+"px"; this.tip.style.top=Math.max(0,e.clientY-r.top-24)+"px";
+    });
+    cv.addEventListener("pointerup",()=>{
+      if (this.drag && !this.drag.moved && opts.onSelect) opts.onSelect(null);   // plain click clears
+      this.drag=null;
+    });
+    cv.addEventListener("pointercancel",()=>{ this.drag=null });
+    cv.addEventListener("pointerleave",()=>{ if (!this.drag) this.hideTip() });
+  }
+  hideTip(){ this.hover=-1; this.tip.style.display="none"; this.draw() }
+  set(cfg){ this.cfg=cfg; this.hover=-1; this.draw() }
+  draw(){
+    const c=this.cfg; if (!c) return;
+    const P=prep(this.cv); if (!P) return;
+    const {g,W,H}=P, rows=c.rows, n=rows.length, ser=c.series;
+    const mut=css("--mut"), lineC=css("--line"), font=css("--font");
+    g.font=`11px ${font}`;
+    const L=66,R=14,T=12,B=30, pw=W-L-R, ph=H-T-B, slot=pw/Math.max(n,1);
+    this.geom={L,slot,n,W};
+    if (!n||!ser.length){
+      g.fillStyle=mut; g.textAlign="center"; g.textBaseline="middle"; g.fillText("No data",W/2,H/2); return;
+    }
+    const col=ser.map(s=>css(s.c)), stack=c.mode==="stack";
+    const top=r=>stack ? ser.reduce((a,s)=>a+r.v[s.key],0) : Math.max(...ser.map(s=>r.v[s.key]));
+    const ymax=axisMax(Math.max(...rows.map(top),1));
+    const Y=v=>T+ph-ph*v/ymax, X=i=>L+slot*(i+.5);
+
+    g.textAlign="right"; g.textBaseline="middle"; g.lineWidth=1;
+    for (let i=0;i<=5;i++){
+      const y=Math.round(T+ph-ph*i/5)+.5;
+      g.strokeStyle=lineC; g.beginPath(); g.moveTo(L,y); g.lineTo(W-R,y); g.stroke();
+      g.fillStyle=mut; g.fillText(ftick(ymax*i/5),L-8,y);
+    }
+    if (this.sel){
+      const x0=L+slot*this.sel.i0, x1=L+slot*(this.sel.i1+1), ac=css("--acc");
+      g.fillStyle=hexA(ac,.16); g.fillRect(x0,T,x1-x0,ph);
+      g.fillStyle=ac; g.fillRect(x0-1,T,2,ph); g.fillRect(x1-1,T,2,ph);
+    }
+    if (this.hover>=0){ g.fillStyle=css("--hover"); g.fillRect(L+slot*this.hover,T,slot,ph) }
+    if (rows.some(r=>r.missing)){                                  // hatched band over slots with no recorded data
+      const hc=document.createElement("canvas"); hc.width=hc.height=8; const hx=hc.getContext("2d");
+      hx.strokeStyle=hexA(mut,.3); hx.lineWidth=1.5; hx.beginPath();
+      hx.moveTo(-1,9); hx.lineTo(9,-1); hx.moveTo(-3,5); hx.lineTo(5,-3); hx.moveTo(3,11); hx.lineTo(11,3); hx.stroke();
+      const pat=g.createPattern(hc,"repeat");
+      for (let i=0;i<n;i++){
+        if (!rows[i].missing) continue; let j=i; while (j+1<n && rows[j+1].missing) j++;
+        g.fillStyle=hexA(mut,.05); g.fillRect(L+slot*i,T,slot*(j-i+1),ph);
+        g.fillStyle=pat; g.fillRect(L+slot*i,T,slot*(j-i+1),ph); i=j;
+      }
+    }
+
+    if (stack){
+      const bw=Math.max(1,Math.min(slot*.68,40));
+      const grads=col.map(cc=>{const gg=g.createLinearGradient(0,T,0,T+ph);gg.addColorStop(0,cc);gg.addColorStop(1,hexA(cc,.62));return gg});
+      rows.forEach((r,i)=>{
+        let base=0; const act=ser.map((s,k)=>k).filter(k=>r.v[ser[k].key]>0);
+        act.forEach((k,j)=>{
+          const v=r.v[ser[k].key], y1=Y(base+v), y0=Y(base);
+          g.fillStyle=grads[k];
+          if (j===act.length-1 && bw>3) rtop(g,X(i)-bw/2,y1,bw,y0-y1,Math.min(5,bw/3));
+          else g.fillRect(X(i)-bw/2,y1,bw,y0-y1);
+          base+=v;
+        });
+      });
+    } else {
+      ser.forEach((s,k)=>{
+        const segs=[]; let cur=[];                                  // gaps break the line (not on the cumulative chart)
+        rows.forEach((r,ix)=>{
+          if (r.missing && !c.noBreak){ if (cur.length) segs.push(cur); cur=[] }
+          else cur.push([X(ix),Y(r.v[s.key])]);
+        });
+        if (cur.length) segs.push(cur);
+        segs.forEach(pts=>{
+          if (pts.length===1){ g.fillStyle=col[k]; g.beginPath(); g.arc(pts[0][0],pts[0][1],3.5,0,7); g.fill(); return }
+          const gg=g.createLinearGradient(0,T,0,T+ph); gg.addColorStop(0,hexA(col[k],.3)); gg.addColorStop(1,hexA(col[k],0));
+          g.beginPath(); curve(g,pts); g.lineTo(pts[pts.length-1][0],T+ph); g.lineTo(pts[0][0],T+ph); g.closePath(); g.fillStyle=gg; g.fill();
+          g.beginPath(); curve(g,pts); g.strokeStyle=col[k]; g.lineWidth=2.25; g.lineJoin="round"; g.stroke();
+        });
+      });
+      if (this.hover>=0 && !rows[this.hover].missing){
+        ser.forEach((s,k)=>{
+          g.beginPath(); g.arc(X(this.hover),Y(rows[this.hover].v[s.key]),4.5,0,7);
+          g.fillStyle=col[k]; g.fill(); g.lineWidth=2; g.strokeStyle=css("--card"); g.stroke();
+        });
+      }
+      g.lineWidth=1;
+    }
+
+    g.fillStyle=mut; g.textAlign="center"; g.textBaseline="top";
+    const lw=Math.max(...rows.map(r=>g.measureText(r.short).width))+16;
+    let step=Math.max(1,Math.ceil(lw/slot)); if (c.xstep) step=Math.ceil(step/c.xstep)*c.xstep;
+    rows.forEach((r,i)=>{
+      if ((c.anchor==="left" ? i : n-1-i) % step === 0) g.fillText(r.short,X(i),T+ph+9);
+    });
+  }
+}
+
+/* ---------- donut ---------- */
+function drawDonut(){
+  const D=S.donut, cv=$("c-donut"), P=prep(cv); if (!D||!P) return;
+  const {g,W,H}=P, cx=W/2, cy=H/2, R=Math.min(W,H)/2-8, lw=Math.max(14,R*.2), r=R-lw/2;
+  g.lineWidth=lw; g.lineCap="round";
+  g.strokeStyle=css("--line"); g.beginPath(); g.arc(cx,cy,r,0,Math.PI*2); g.stroke();
+  const live=D.parts.filter(p=>p.v>0), tot=D.parts.reduce((a,p)=>a+p.v,0);
+  if (tot>0){
+    const gap=live.length>1 ? (lw/r)*1.15 : 0; let a=-Math.PI/2;
+    live.forEach(p=>{
+      const sw=p.v/tot*Math.PI*2; let s=a+gap/2, e=a+sw-gap/2; if (e<=s) e=s+.001;
+      g.strokeStyle=css(p.c); g.beginPath(); g.arc(cx,cy,r,s,e); g.stroke(); a+=sw;
+    });
+  }
+  const font=css("--font");
+  g.textAlign="center"; g.textBaseline="middle";
+  g.fillStyle=css("--fg"); g.font=`650 ${Math.max(15,R*.2)}px ${font}`; g.fillText(D.total||fmt(tot),cx,cy-7);
+  g.fillStyle=css("--mut"); g.font=`12px ${font}`; g.fillText("total",cx,cy+14);
+}
+
+/* ---------- charts ---------- */
+const main=new Chart($("c-main")), hod=new Chart($("c-hod")), dow=new Chart($("c-dow"));
+const cum=new Chart($("c-cum"),{onSelect:setSel});
+const drawAll=()=>{ main.draw(); cum.draw(); hod.draw(); dow.draw(); drawDonut() };
+addEventListener("resize",drawAll);
+addEventListener("themechange",()=>{ drawAll(); buildThemes() });
+
+/* ---------- server / interface selection ---------- */
+const srvCfg = id => S.config.servers.find(s=>s.id===id);
+function ifaceLabel(itf){
+  const f=(srvCfg(S.server)?.interfaces||{})[itf.name] || itf.alias;
+  return f && f!==itf.name ? `${f} (${itf.name})` : itf.name;
+}
+function fillServers(){
+  const sel=$("server"); $("w-server").hidden=S.config.servers.length<2;
+  sel.innerHTML=S.config.servers.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
+  sel.value=S.server;
+}
+function fillIfaces(){
+  const sel=$("iface"), list=S.data?.interfaces||[];
+  sel.innerHTML=list.map(i=>`<option value="${esc(i.name)}">${esc(ifaceLabel(i))}</option>`).join("");
+  const want=S.set.iface[S.server];
+  S.iface=list.some(i=>i.name===want)?want:list[0]?.name;
+  sel.value=S.iface||"";
+}
+
+/* ---------- data loading ---------- */
+const cacheKey = id => "vnstat:last:"+id;
+function setBusy(b){ const btn=$("reload"); btn.disabled=b; btn.classList.toggle("spin",b) }
+function toast(msg){
+  const t=$("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove("show"),1800);
+}
+function renderStatus(){
+  const dot=$("dot"), st=$("status");
+  st.title=S.stamp?"Last updated "+stampStr(new Date(S.stamp)):"";
+  if (S.failing){
+    dot.className="dot bad";
+    const when=S.stamp?` · last updated ${ago(S.stamp)}`:"";
+    if (S.inflight) st.textContent="Reconnecting…"+when;
+    else st.textContent=`Disconnected · retrying in ${Math.max(0,Math.ceil((S.nextAt-Date.now())/1000))}s`+when;
+    return;
+  }
+  if (!S.data){ dot.className="dot stale"; st.textContent="Loading…"; return }
+  dot.className=S.stale?"dot stale":"dot";
+  st.textContent=(S.stale?"Cached · ":"Updated ")+ago(S.stamp);
+}
+/* Polling (vnStat has no push channel): every 5s while disconnected, otherwise on the chosen interval. */
+function plan(){
+  clearTimeout(S.timer); clearInterval(S.cd);
+  if (S.failing){
+    S.nextAt=Date.now()+5000;
+    S.timer=setTimeout(()=>load(),5000);
+    S.cd=setInterval(renderStatus,1000);
+  } else if (S.set.refresh>0){
+    S.timer=setTimeout(()=>{ if (document.hidden) plan(); else load() },S.set.refresh*1000);
+  }
+  renderStatus();
+}
+function load(manual){
+  if (S.inflight) return S.inflight;                                   // one request at a time
+  if (manual && Date.now()-S.lastDone<3000){ toast("Already up to date"); return Promise.resolve() }
+  const sid=S.server, ac=new AbortController(); S.ac=ac;
+  setBusy(true); renderStatus();
+  const p=(async()=>{
+    try{
+      const r=await fetch("api/vnstat?server="+encodeURIComponent(sid),{cache:"no-store",signal:ac.signal});
+      let j; try{ j=await r.json() }catch(e){ throw new Error("HTTP "+r.status) }
+      if (!r.ok||j.error||!j.interfaces) throw new Error(j.error||"HTTP "+r.status);
+      if (sid!==S.server) return;
+      S.failing=false; S.err=""; S.stale=false; S.lastDone=Date.now();
+      $("err").hidden=true;
+      apply(j,Date.now());
+      lsSet(cacheKey(sid),JSON.stringify({t:S.stamp,data:j}));
+    }catch(e){
+      if (e.name==="AbortError"||sid!==S.server) return;
+      S.failing=true; S.err=e.message; S.lastDone=Date.now();
+      $("err").textContent=`Can't load “${srvCfg(sid)?.name||sid}”: ${S.err}`; $("err").hidden=false;
+    }finally{
+      if (S.ac===ac){ S.inflight=null; setBusy(false); plan() }
+    }
+  })();
+  S.inflight=p; return p;
+}
+function apply(j,t){
+  S.data=j; S.stamp=t;
+  $("ver").textContent=j.vnstatversion?"v"+j.vnstatversion:"";
+  fillIfaces(); render();
+  document.body.classList.add("ready");
+  drawAll();
+}
+function switchServer(id){
+  if (S.ac) S.ac.abort();
+  S.inflight=null; S.ac=null; clearTimeout(S.timer);
+  S.server=id; S.set.server=id; saveSet();
+  S.data=null; S.failing=false; S.sel=null; S.stale=false; S.lastDone=0;
+  $("err").hidden=true; $("server").value=id;
+  setBusy(false);
+  let c=null; try{ c=JSON.parse(lsGet(cacheKey(id))||"null") }catch(e){}
+  if (c&&c.data){ S.stale=true; apply(c.data,c.t) }
+  else { document.body.classList.remove("ready"); renderStatus() }
+  load();
+}
+
+/* ---------- selection on the cumulative chart ---------- */
+function setSel(s){
+  S.sel = s ? {t0:S.rows[s.i0].t, t1:S.rows[s.i1].t} : null;
+  applySel();
+}
+function resolveSel(){
+  if (!S.sel) return null;
+  let i0=S.rows.findIndex(r=>r.t>=S.sel.t0), i1=-1;
+  S.rows.forEach((r,i)=>{ if (r.t<=S.sel.t1) i1=i });
+  return (i0<0||i1<i0) ? null : {i0,i1};
+}
+function applySel(){
+  const s=resolveSel(); if (!s) S.sel=null;
+  main.sel=cum.sel=s; main.draw(); cum.draw();
+  const box=$("selbar");
+  if (!s){ box.innerHTML=`<span class="hint">Drag across the chart to select a range and see its totals. Click to clear.</span>`; return }
+  const part=S.rows.slice(s.i0,s.i1+1), n=part.length, rec=part.filter(r=>r.has), np=rec.length;
+  const a=part[0].label, b=part[n-1].label, miss=part.filter(r=>r.missing).length;
+  const head=`<div class="selhead"><span><b>${esc(n===1?a:a+" – "+b)}</b> <span class="mut">· ${spanText(S.period,n)}${miss?` · ${miss} without data`:""}</span></span>`+
+    `<button class="btn" id="selclear">Clear</button></div>`;
+  if (!np){ box.innerHTML=head+`<span class="hint">No data was recorded in this span.</span>`; $("selclear").onclick=()=>{ S.sel=null; applySel() }; return }
+  const rx=rec.reduce((x,r)=>x+r.v.rx,0), tx=rec.reduce((x,r)=>x+r.v.tx,0), tot=rx+tx;
+  const peak=rec.reduce((m,r)=>r.v.tot>m.v.tot?r:m,rec[0]);
+  const all=S.rows.reduce((x,r)=>x+r.v.tot,0), [da,ua,ta]=trio(rx,tx), per=S.period==="fiveminute"?"5 min":S.period;
+  box.innerHTML=head+
+    `<div class="selgrid">`+
+    `<div><small>Download</small><b>${da}</b></div>`+
+    `<div><small>Upload</small><b>${ua}</b></div>`+
+    `<div><small>Total</small><b>${ta}</b><span>${all?(tot/all*100).toFixed(1):"0"}% of range</span></div>`+
+    `<div><small>Average</small><b>${fmt(tot/np)}</b><span>per ${per}${miss?" recorded":""}</span></div>`+
+    `<div><small>Peak</small><b>${fmt(peak.v.tot)}</b><span>${esc(peak.label)}</span></div>`+
+    `</div>`;
+  $("selclear").onclick=()=>{ S.sel=null; applySel() };
+}
+addEventListener("keydown",e=>{ if (e.key==="Escape" && S.sel && !$("dlg").open){ S.sel=null; applySel() } });
+
+/* ---------- render ---------- */
+function render(){
+  const itf=S.data?.interfaces.find(i=>i.name===S.iface);
+  if (!itf) return;
+  const tr=itf.traffic||{};
+  const avail=Object.keys(PERIODS).filter(k=>(tr[k]||[]).length);
+  if (!avail.includes(S.period)) S.period=avail.includes("day")?"day":avail[0];
+  $("tabs").innerHTML=avail.map(k=>`<button data-p="${k}" class="${k===S.period?"on":""}">${PERIODS[k]}</button>`).join("");
+
+  const all=S.period?(tr[S.period]||[]).slice().sort((a,b)=>ts(a)-ts(b)):[];
+  const R=RANGES[S.period]||{def:0,presets:[]};
+  let want=S.set.range[S.period]; if (want===undefined) want=R.def;
+  const B=S.period?buildSlots(S.period,all,want):{slots:[],total:0,isAll:true};
+  const chips=[...R.presets.filter(([,n])=>n<B.total).map(([l,n])=>({l,n})),{l:"All",n:0}];
+  $("ranges").innerHTML=chips.map(c=>`<button data-n="${c.n}" class="${(c.n===0?B.isAll:(!B.isAll&&c.n===want))?"on":""}">${c.l}</button>`).join("");
+  $("ranges").hidden=B.total<2;
+
+  const rows=B.slots.map(({t,e,cur})=>{
+    const ent=e||entryOf(S.period,t);
+    return {t, has:!!e, missing:!e&&!cur, label:label(ent,S.period), abs:label(ent,S.period,true), short:shortLabel(ent,S.period),
+            v:e?{rx:e.rx,tx:e.tx,tot:e.rx+e.tx}:{rx:0,tx:0,tot:0}};
+  });
+  S.rows=rows;
+  const rec=rows.filter(r=>r.has), G=gapInfo(rows);
+  $("sub-main").textContent = rows.length
+    ? `${B.isAll?"All ":"Last "}${spanText(S.period,rows.length)} · ${rows[0].label}${rows.length>1?" – "+rows[rows.length-1].label:""}`
+    : "No data yet";
+  $("lgap").hidden=!G.missing;
+
+  cards(itf,rows); lifetime(itf);
+
+  const ser=["rx","tx"].filter(k=>S.show[k]).map(k=>({key:k,c:"--"+k}));
+  const tp=f=>r=>r.has ? f(r) : tip(r.label,[],r.missing?"No data recorded for this period":"Waiting for data…");
+  main.set({rows,series:ser,mode:S.set.mode,tip:tp(r=>{ const [a,b,t]=trio(r.v.rx,r.v.tx);
+    return tip(r.label,[["--rx","Download",a],["--tx","Upload",b]],"Total "+t) })});
+
+  let run=0;
+  const crow=rows.map(r=>{ run+=r.v.tot; return {t:r.t,has:r.has,missing:r.missing,label:r.label,short:r.short,v:{cum:run,tot:r.v.tot}} });
+  cum.set({rows:crow,series:[{key:"cum",c:"--acc"}],mode:"line",noBreak:true,
+    tip:r=>tip(r.label,[["--acc","Cumulative",fmt(r.v.cum)]],r.missing?"No data recorded for this period":"This period "+fmt(r.v.tot))});
+  applySel();
+
+  const rx=rec.reduce((a,r)=>a+r.v.rx,0), tx=rec.reduce((a,r)=>a+r.v.tx,0), tot=rx+tx;
+  const [da,ua,ta]=trio(rx,tx);
+  S.donut={parts:[{v:rx,c:"--rx"},{v:tx,c:"--tx"}],total:ta};
+  const pc=v=>tot?(v/tot*100).toFixed(1)+"%":"–";
+  $("donut-legend").innerHTML=
+    `<div><i style="background:var(--rx)"></i>Download<b>${da}</b><em>${pc(rx)}</em></div>`+
+    `<div><i style="background:var(--tx)"></i>Upload<b>${ua}</b><em>${pc(tx)}</em></div>`;
+
+  const hp=hourPattern(tr), dp=weekPattern(tr);
+  $("p-hod").hidden=!hp; $("p-dow").hidden=!dp;
+  const ptip=r=>{ const [a,b,t]=trio(r.v.rx,r.v.tx); return tip(r.label,[["--rx","Avg download",a],["--tx","Avg upload",b]],"Avg total "+t) };
+  const pser=[{key:"rx",c:"--rx"},{key:"tx",c:"--tx"}];
+  if (hp) hod.set({rows:hp,series:pser,mode:"stack",tip:ptip,anchor:"left",xstep:3});
+  if (dp) dow.set({rows:dp,series:pser,mode:"stack",tip:ptip,anchor:"left"});
+
+  table();
+}
+
+function hourPattern(tr){
+  const h=tr.hour||[]; if (!h.length) return null;
+  const s=Array.from({length:24},()=>({rx:0,tx:0,n:0}));
+  h.forEach(e=>{ const x=s[e.time.hour]; x.rx+=e.rx; x.tx+=e.tx; x.n++ });
+  return s.map((x,i)=>({
+    short:h12(i), label:`${t12(i,0)} – ${t12((i+1)%24,0)}`,
+    v:{rx:x.n?x.rx/x.n:0, tx:x.n?x.tx/x.n:0}
+  }));
+}
+function weekPattern(tr){
+  const d=tr.day||[]; if (!d.length) return null;
+  const s=Array.from({length:7},()=>({rx:0,tx:0,n:0}));
+  d.forEach(e=>{ const x=s[(new Date(e.date.year,e.date.month-1,e.date.day).getDay()+6)%7]; x.rx+=e.rx; x.tx+=e.tx; x.n++ });
+  return s.map((x,i)=>({short:DOW[i],label:DOW[i],v:{rx:x.n?x.rx/x.n:0,tx:x.n?x.tx/x.n:0}}));
+}
+
+function cards(itf,rows){
+  const rec=rows.filter(r=>r.has), n=rec.length||1, miss=rows.filter(r=>r.missing).length;
+  const rx=rec.reduce((a,r)=>a+r.v.rx,0), tx=rec.reduce((a,r)=>a+r.v.tx,0);
+  const peak=rec.reduce((m,r)=>r.v.tot>m.v.tot?r:m,{v:{tot:0},label:"–"});
+  const [da,ua,ta]=trio(rx,tx), per=S.period==="fiveminute"?"5 min":S.period;
+  const c=[
+    ["rx","Download",da,"in selected range"],
+    ["tx","Upload",ua,"in selected range"],
+    ["","Total",ta,spanText(S.period,rows.length||0)+(miss?` · ${rec.length} recorded`:"")],
+    ["","Average",fmt((rx+tx)/n),`per ${per}${miss?" recorded":""}`],
+    ["","Peak",fmt(peak.v.tot),peak.label]
+  ];
+  $("cards").innerHTML=c.map(([k,a,b,s])=>`<div class="card ${k}"><small>${a}</small><b>${b}</b><span>${esc(s)}</span></div>`).join("");
+}
+
+/* All-time totals barely change between views, so they live in their own quiet strip instead of a stat card. */
+function lifetime(itf){
+  const lt=itf.traffic.total||{rx:0,tx:0}, tot=lt.rx+lt.tx, [a,b,t]=trio(lt.rx,lt.tx);
+  const c=itf.created&&itf.created.date; let since="";
+  if (c&&c.year){
+    const cd={year:c.year,month:c.month||1,day:c.day||1}, days=Math.max(1,Math.round((Date.now()-new Date(cd.year,cd.month-1,cd.day))/864e5));
+    since=`Tracking since ${dstr(cd)} · ≈ ${fmt(tot/days)} per day`;
+  }
+  const pr=tot?lt.rx/tot*100:50;
+  $("life").innerHTML=
+    `<div><small>All-time · ${esc(ifaceLabel(itf))}</small><b>${t}</b>${since?`<span class="mut">${esc(since)}</span>`:""}</div>`+
+    `<div><div class="lbar" role="img" aria-label="Download ${pr.toFixed(1)}%, upload ${(100-pr).toFixed(1)}%"><i style="width:${pr}%;background:var(--rx)"></i><i style="flex:1;background:var(--tx)"></i></div>`+
+    `<div class="lk"><span><i style="background:var(--rx)"></i>Download <b>${a}</b> ${pr.toFixed(1)}%</span><span><i style="background:var(--tx)"></i>Upload <b>${b}</b> ${(100-pr).toFixed(1)}%</span></div></div>`;
+}
+
+function table(){
+  const cols=[["t","Period",""],["rx","Download","--rx"],["tx","Upload","--tx"],["tot","Total",""]];
+  $("thead").innerHTML=cols.map(([k,n,c])=>`<th data-k="${k}" aria-sort="${S.sort.k===k?(S.sort.d>0?"ascending":"descending"):"none"}">${c?`<i style="background:var(${c})"></i>`:""}${n}${S.sort.k===k?(S.sort.d>0?" ▲":" ▼"):""}</th>`).join("");
+  const rec=S.rows.filter(r=>r.has), val=(r,k)=>k==="t"?r.t:r.v[k];
+  const rows=rec.slice().sort((a,b)=>(val(a,S.sort.k)-val(b,S.sort.k))*S.sort.d);
+  const max=Math.max(1,...rec.map(r=>r.v.tot)), bar=hexA(css("--acc"),.2);
+  $("tbody").innerHTML=rows.map(r=>{
+    const [a,b,t]=trio(r.v.rx,r.v.tx), w=(r.v.tot/max*100).toFixed(1);
+    return `<tr><td>${esc(r.abs)}</td><td class="num">${a}</td><td class="num">${b}</td><td class="num" style="background:linear-gradient(270deg,${bar} ${w}%,transparent ${w}%)">${t}</td></tr>`;
+  }).join("");
+  const rx=rec.reduce((x,r)=>x+r.v.rx,0), tx=rec.reduce((x,r)=>x+r.v.tx,0), [fa,fb,ft]=trio(rx,tx);
+  $("tfoot").innerHTML=rec.length?`<tr><td>Total · ${rec.length.toLocaleString()} recorded</td><td class="num">${fa}</td><td class="num">${fb}</td><td class="num">${ft}</td></tr>`:"";
+  const miss=S.rows.filter(r=>r.missing).length;
+  $("sub-det").textContent=rec.length
+    ? `${countNoun(S.period,rec.length)} recorded · ${rec[0].abs} – ${rec[rec.length-1].abs}${miss?` · ${miss.toLocaleString()} with no data aren’t listed`:""} · click a column to sort`
+    : "No data recorded in this range";
+}
+
+/* ---------- main events ---------- */
+$("thead").addEventListener("click",e=>{
+  const k=e.target.dataset.k; if (!k) return;
+  S.sort=S.sort.k===k?{k,d:-S.sort.d}:{k,d:-1}; table();
+});
+$("tabs").addEventListener("click",e=>{
+  const p=e.target.dataset.p; if (!p) return;
+  S.period=p; S.set.period=p; saveSet(); S.sel=null; render(); drawAll();
+});
+$("ranges").addEventListener("click",e=>{
+  const n=e.target.dataset.n; if (n===undefined) return;
+  S.set.range[S.period]=+n; saveSet(); S.sel=null; render(); drawAll();
+});
+$("server").onchange=e=>switchServer(e.target.value);
+$("iface").onchange=e=>{ S.iface=e.target.value; S.set.iface[S.server]=S.iface; saveSet(); S.sel=null; render(); drawAll() };
+$("reload").onclick=()=>load(true);
+for (const k of ["rx","tx"]) $("l"+k).onclick=()=>{ S.show[k]=!S.show[k]; $("l"+k).classList.toggle("off",!S.show[k]); render() };
+function syncMode(){ $("mstack").classList.toggle("on",S.set.mode==="stack"); $("mline").classList.toggle("on",S.set.mode==="line") }
+for (const [id,m] of [["mstack","stack"],["mline","line"]]) $(id).onclick=()=>{ S.set.mode=m; saveSet(); syncMode(); render() };
+document.addEventListener("visibilitychange",()=>{
+  if (!document.hidden && S.data && Date.now()-S.lastDone > Math.max(5,S.set.refresh||30)*1000) load();
+});
+addEventListener("online",()=>load());
+
+/* ---------- settings dialog ---------- */
+let D=null; // draft copy of the server config being edited
+const dlg=$("dlg");
+function buildThemes(){
+  const mode=document.documentElement.dataset.mode;
+  $("themes").innerHTML=Object.entries(window.__THEMES).map(([id,t])=>{
+    const c=t[mode];
+    return `<button class="theme" data-t="${id}" aria-pressed="${S.set.theme===id}">`+
+      `<div class="sw" style="background:${c.bg}"><i style="width:34%;background:${c.card};border:1px solid ${c.line}"></i><i style="width:16%;background:${c.rx}"></i><i style="width:16%;height:65%;background:${c.tx}"></i><i style="width:10%;height:40%;background:${c.acc}"></i></div>`+
+      `<span>${esc(t.name)}</span></button>`;
+  }).join("");
+  document.querySelectorAll("#ap button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.set.appearance));
+}
+function buildServers(){
+  $("srvlist").innerHTML=D.servers.map((s,i)=>
+    `<div class="srv"><input type="text" class="n" data-i="${i}" value="${esc(s.name)}" placeholder="Name" aria-label="Server name">`+
+    `<input type="text" class="u" data-i="${i}" value="${esc(s.url)}" placeholder="/data/vnstat.db  or  http://host:8685/json.cgi" aria-label="Database path or URL" spellcheck="false" autocapitalize="off">`+
+    `<button class="btn x" data-i="${i}" title="Remove" aria-label="Remove server"${D.servers.length<2?" disabled":""}>✕</button></div>`).join("");
+  buildIfaces();
+}
+function buildIfaces(){
+  const cur=D.servers.find(s=>s.id===S.server);
+  $("if-for").textContent=cur?`· ${cur.name}`:"";
+  if (!cur){ $("iflist").innerHTML=`<div class="mut">Save the new server first, then switch to it to name its interfaces.</div>`; return }
+  const names=[...new Set([...(S.data?.interfaces||[]).map(i=>i.name),...Object.keys(cur.interfaces||{})])];
+  const alias=Object.fromEntries((S.data?.interfaces||[]).map(i=>[i.name,i.alias]));
+  $("iflist").innerHTML=names.length?names.map(n=>
+    `<div class="ifr"><code>${esc(n)}</code><input type="text" data-if="${esc(n)}" value="${esc((cur.interfaces||{})[n]||"")}" placeholder="${esc(alias[n]||"Friendly name (optional)")}" aria-label="Friendly name for ${esc(n)}"></div>`).join("")
+    :`<div class="mut">No interfaces loaded yet.</div>`;
+}
+function openSettings(){
+  D=JSON.parse(JSON.stringify(S.config));
+  $("s-units").value=S.set.units; $("s-refresh").value=String(S.set.refresh); $("s-rel").checked=!!S.set.rel;
+  $("cfgmsg").textContent=""; $("cfgmsg").className="msg";
+  buildThemes(); buildServers();
+  if (!dlg.open) dlg.showModal();
+}
+$("open-settings").onclick=openSettings;
+$("dlg-close").onclick=()=>dlg.close();
+dlg.addEventListener("click",e=>{ if (e.target===dlg) dlg.close() });
+function themeChanged(){ saveSet(); window.__applyTheme(); drawAll(); buildThemes() }
+$("themes").addEventListener("click",e=>{ const b=e.target.closest("[data-t]"); if (!b) return; S.set.theme=b.dataset.t; themeChanged() });
+$("ap").addEventListener("click",e=>{ const v=e.target.dataset.v; if (!v) return; S.set.appearance=v; themeChanged() });
+$("s-units").onchange=e=>{ S.set.units=e.target.value; saveSet(); render(); drawAll() };
+$("s-refresh").onchange=e=>{ S.set.refresh=+e.target.value; saveSet(); if (!S.failing) plan() };
+$("s-rel").onchange=e=>{ S.set.rel=e.target.checked; saveSet(); render(); drawAll() };
+$("srvlist").addEventListener("input",e=>{
+  const i=e.target.dataset.i; if (i===undefined) return;
+  D.servers[i][e.target.classList.contains("n")?"name":"url"]=e.target.value;
+});
+$("srvlist").addEventListener("click",e=>{
+  const b=e.target.closest(".x"); if (!b||b.disabled) return;
+  D.servers.splice(+b.dataset.i,1); buildServers();
+});
+$("add-srv").onclick=()=>{ D.servers.push({name:"",url:"",interfaces:{}}); buildServers(); const l=$("srvlist").querySelectorAll(".n"); l[l.length-1].focus() };
+$("iflist").addEventListener("input",e=>{
+  const n=e.target.dataset.if; if (n===undefined) return;
+  const cur=D.servers.find(s=>s.id===S.server); cur.interfaces=cur.interfaces||{};
+  if (e.target.value.trim()) cur.interfaces[n]=e.target.value; else delete cur.interfaces[n];
+});
+$("save-cfg").onclick=async()=>{
+  const msg=$("cfgmsg"), btn=$("save-cfg"); btn.disabled=true; msg.className="msg"; msg.textContent="Saving…";
+  try{
+    const r=await fetch("api/config",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(D)});
+    const j=await r.json(); if (!r.ok) throw new Error(j.error||"HTTP "+r.status);
+    const prev=srvCfg(S.server), prevUrl=prev?.url;
+    S.config=j; D=JSON.parse(JSON.stringify(j));
+    msg.className="msg ok"; msg.textContent="Saved";
+    if (!srvCfg(S.server)){ fillServers(); switchServer(S.config.servers[0].id) }
+    else { fillServers(); fillIfaces(); render(); drawAll(); if (srvCfg(S.server).url!==prevUrl){ S.lastDone=0; load() } }
+    buildServers();
+  }catch(e){ msg.className="msg err"; msg.textContent="Could not save: "+e.message }
+  finally{ btn.disabled=false }
+};
+
+/* ---------- boot ---------- */
+(function init(){
+  const cfg=S.config.servers;
+  S.server = cfg.some(s=>s.id===S.set.server) ? S.set.server : cfg[0]?.id;
+  fillServers(); syncMode();
+  if (S.set.period in PERIODS) S.period=S.set.period;
+  const boot=window.__BOOT__;
+  if (boot && boot.server===S.server){ apply(boot.data,Date.now()) }          // embedded by server.py: first paint has data
+  else {
+    let c=null; try{ c=JSON.parse(lsGet(cacheKey(S.server))||"null") }catch(e){}
+    if (c&&c.data){ S.stale=true; apply(c.data,c.t) }
+  }
+  renderStatus();
+  setInterval(()=>{ if (!document.hidden && !S.failing) renderStatus() },15000);   // wording only changes once a minute
+  load();
+})();
+</script>
+</body>
+</html>

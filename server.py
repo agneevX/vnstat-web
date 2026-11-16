@@ -6,12 +6,12 @@
   python3 server.py --demo              # first run only: creates a config with fake demo servers
 
 A server in the config can be:
-  /data/vnstat.db                       path to a vnStat SQLite database (also sqlite:/path)
+  /var/lib/vnstat/vnstat.db             path to a vnStat SQLite database, opened read-only (also sqlite:/path)
   http(s)://host:8685/json.cgi          vergoh/vnstat docker image
   local:                                run `vnstat --json` on this machine
   demo:<anything>                       generated sample data
 """
-import argparse, json, math, os, random, re, sqlite3, subprocess, threading, time, urllib.error, urllib.request, zlib
+import argparse, calendar, json, math, os, random, re, sqlite3, subprocess, threading, time, urllib.error, urllib.request, zlib
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -104,6 +104,13 @@ def _when(v, utc):
     return datetime.strptime(t[:10], "%Y-%m-%d")
 
 
+def _epoch(v):
+    """UTC epoch seconds of a vnStat 5-minute/hourly DATE value."""
+    if isinstance(v, (int, float)) or re.fullmatch(r"\d{9,}", str(v).strip()):
+        return int(v)
+    return calendar.timegm(datetime.strptime(str(v).strip().replace("T", " ")[:19], "%Y-%m-%d %H:%M:%S").timetuple())
+
+
 def read_sqlite(path):
     """Builds the same structure as `vnstat --json` straight from a vnStat 2.x database file."""
     p = Path(path).expanduser()
@@ -117,6 +124,7 @@ def read_sqlite(path):
         # read-only directories can't hold WAL's -shm file; fall back to a plain snapshot read
         con = sqlite3.connect(base + "?immutable=1", uri=True, timeout=5)
     try:
+        con.execute("pragma query_only = on")   # belt and braces: this process never writes to the database
         try:
             info = dict(con.execute("select name, value from info").fetchall())
         except sqlite3.Error:
@@ -141,6 +149,10 @@ def read_sqlite(path):
                                  else {"year": dt.year, "month": dt.month} if tbl == "month" else {"year": dt.year})
                     if timed:
                         e["time"] = {"hour": dt.hour, "minute": dt.minute}
+                        try:  # exact instant, so clients can show it in their own timezone
+                            e["timestamp"] = _epoch(d)
+                        except ValueError:
+                            pass
                     lst.append(e)
                 traffic[tbl] = lst
             item = {"name": name, "alias": alias or "", "traffic": traffic}
@@ -389,7 +401,7 @@ if __name__ == "__main__":
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8080)
     p.add_argument("--config", default=str(ROOT / "config.toml"), help="TOML file holding servers and friendly names")
-    p.add_argument("--url", default="/data/vnstat.db", help="first server (a vnStat database path or json.cgi URL) used when creating a new config")
+    p.add_argument("--url", default="/var/lib/vnstat/vnstat.db", help="first server (a vnStat database path or json.cgi URL) used when creating a new config")
     p.add_argument("--local", action="store_true", help="when creating a new config, use the local vnstat binary")
     p.add_argument("--vnstat", default="vnstat", help="vnstat binary for local: servers")
     p.add_argument("--cache", type=float, default=5, help="seconds to cache each server's response")

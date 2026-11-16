@@ -163,18 +163,38 @@ tbody tr:last-child td{border-bottom:0}
 tfoot td{position:sticky;bottom:0;background:var(--card);font-weight:650;border-top:2px solid var(--line);border-bottom:0}
 td.num{font-variant-numeric:tabular-nums}
 th:nth-child(n+2),td:nth-child(n+2){width:20%}
-.life{display:grid;grid-template-columns:minmax(210px,auto) 1fr;gap:10px 32px;align-items:center;border:1px dashed var(--line);border-radius:14px;padding:12px 18px;margin-bottom:16px}
-.life:empty{display:none}
-.life small{display:block;color:var(--fg2);font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.06em}
-.life b{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
-.life .mut{font-size:12px}
+.hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+@media (max-width:860px){.hero{grid-template-columns:1fr}}
+.now,.life{border-radius:14px;padding:14px 18px;min-height:176px;display:flex;flex-direction:column;gap:8px}
+.now{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
+.life{border:1px dashed var(--line)}
+.kick{color:var(--fg2);font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.06em}
+.nh{display:flex;flex-wrap:wrap;gap:2px 12px;justify-content:space-between;align-items:baseline}
+.nh .mut{font-size:12.5px}
+.nbig{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.nbig b{font-size:34px;font-weight:700;letter-spacing:-.025em;line-height:1.15}
+.ngrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px 16px;margin-top:auto}
+.ngrid small{display:block;color:var(--fg2);font-size:12px;font-weight:600}
+.ngrid small i,.selgrid small i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.ngrid b{font-size:15.5px;font-weight:650}
+.nlast{font-size:12px}
 .lbar{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--line);gap:2px}
 .lbar i{display:block;height:100%}
-.lk{display:flex;flex-wrap:wrap;gap:4px 22px;margin-top:8px;font-size:12.5px;color:var(--fg2)}
+.lk{display:flex;flex-wrap:wrap;gap:4px 22px;font-size:12.5px;color:var(--fg2)}
 .lk span{display:flex;align-items:center;gap:6px}
 .lk i{width:9px;height:9px;border-radius:3px;display:inline-block}
-.lk b{display:inline;font-size:inherit;font-weight:650;color:var(--fg);letter-spacing:0;line-height:inherit}
-@media (max-width:640px){.life{grid-template-columns:1fr}}
+.lk b{font-weight:650;color:var(--fg)}
+.kpis{margin:2px 0 12px}
+.pill{display:inline-flex;align-items:center;gap:8px;border:1px solid #ef4444;color:var(--fg);background:var(--card);border-radius:99px;padding:4px 12px;font-size:12.5px;font-weight:600}
+.conn{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:60;width:min(460px,calc(100vw - 24px));display:flex;gap:14px;padding:16px 18px;border-radius:16px;border:1px solid var(--line);border-left:4px solid #ef4444;background:var(--card);background:color-mix(in srgb,var(--card) 90%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 18px 50px rgba(0,0,0,.35);animation:pop .3s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes pop{from{opacity:0;transform:translate(-50%,-14px) scale(.97)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+.conn-ic{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(239,68,68,.16);color:#ef4444}
+.conn-b{min-width:0;flex:1}
+.conn-b b{display:block;font-size:15px}
+.conn-b p{margin:3px 0 12px;color:var(--fg2);font-size:13px;word-break:break-word}
+.conn-f{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.conn-f .mut{flex:1;font-size:12px;min-width:140px}
+.conn-f .btn{padding:5px 12px}
 .hat{background:repeating-linear-gradient(135deg,var(--mut) 0 1.5px,transparent 1.5px 4px);opacity:.75}
 .legend span.static{cursor:default}
 @keyframes sh{0%{background-position:-400px 0}100%{background-position:400px 0}}
@@ -215,7 +235,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 <main>
 <header>
   <div class="brand"><h1>vnStat</h1><span class="mut" id="ver"></span></div>
-  <div class="status"><span class="dot stale" id="dot"></span><span id="status">Loading…</span></div>
+  <button class="pill" id="offline" hidden title="Show connection details"><span class="dot bad"></span>Offline</button>
 </header>
 
 <div class="toolbar">
@@ -230,12 +250,10 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
   </div>
 </div>
 
-<div class="notice" id="err" hidden></div>
-<div class="cards" id="cards">
-  <div class="card skel"></div><div class="card skel"></div><div class="card skel"></div>
-  <div class="card skel"></div><div class="card skel"></div>
+<div class="hero" id="hero">
+  <section class="now skel" id="now" aria-live="polite"></section>
+  <section class="life skel" id="life"></section>
 </div>
-<div class="life" id="life"></div>
 
 <section class="panel">
   <div class="phead">
@@ -245,6 +263,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
       <div class="seg" role="group" aria-label="Chart style"><button id="mstack" class="on">Bars</button><button id="mline">Lines</button></div>
     </div>
   </div>
+  <div class="kpis" id="kpis"></div>
   <div class="cv"><canvas id="c-main" class="big"></canvas><div class="tip"></div><div class="ph skel"></div></div>
   <div class="legend">
     <span id="lrx"><i style="background:var(--rx)"></i>Download</span>
@@ -286,6 +305,15 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 
 <div class="toast" id="toast" role="status"></div>
 
+<div class="conn" id="conn" role="alertdialog" aria-labelledby="conn-t" aria-describedby="conn-m" hidden>
+  <div class="conn-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.8a15 15 0 0 1 4.2-2.6M8.5 5.2A15 15 0 0 1 22 8.8M5 12.9a10 10 0 0 1 5.2-2.8M13.5 10.1a10 10 0 0 1 5.5 2.8M8.5 16.4a5 5 0 0 1 7 0M12 20h.01M2 2l20 20"/></svg></div>
+  <div class="conn-b">
+    <b id="conn-t">Can’t reach the server</b>
+    <p id="conn-m"></p>
+    <div class="conn-f"><span class="mut" id="conn-r"></span><button class="btn" id="conn-retry">Retry now</button><button class="btn" id="conn-x">Dismiss</button></div>
+  </div>
+</div>
+
 <dialog id="dlg" aria-labelledby="dlg-title">
   <div class="dh"><h2 id="dlg-title">Settings</h2><button class="btn" id="dlg-close">Done</button></div>
   <div class="db">
@@ -299,7 +327,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     <div class="row"><label for="s-rel">Relative dates</label><label><input type="checkbox" id="s-rel"> “Today”, “Yesterday”, “This month”</label></div>
 
     <h3>Servers</h3>
-    <div class="mut" style="font-size:12px;margin:-2px 0 8px">Each server is a vnStat database file (like <code>/data/vnstat.db</code>, read on the machine running this dashboard) or a vnStat <code>json.cgi</code> URL.</div>
+    <div class="mut" style="font-size:12px;margin:-2px 0 8px">Each server is a vnStat database file (like <code>/var/lib/vnstat/vnstat.db</code>, opened read-only on the machine running this dashboard) or a vnStat <code>json.cgi</code> URL.</div>
     <div id="srvlist"></div>
     <button class="btn" id="add-srv">+ Add server</button>
 
@@ -324,11 +352,17 @@ const RANGES = {
   month:     {def:12,  presets:[["3M",3],["6M",6],["12M",12],["2Y",24]]},
   year:      {def:0,   presets:[]}
 };
-const DEF = {theme:"default", appearance:"auto", units:"iec", rel:true, refresh:30, mode:"stack", server:"", iface:{}, period:"day", range:{}};
+const DEF = {v:3, theme:"default", appearance:"auto", units:"iec", rel:true, refresh:30, mode:"stack", server:"", iface:{}, period:"fiveminute", range:{}};
 const lsGet = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
 const lsSet = (k,v) => { try { localStorage.setItem(k,v) } catch (e) {} };
-function loadSet(){ try { return Object.assign({}, DEF, JSON.parse(lsGet("vnstat:settings") || "{}")) } catch (e) { return {...DEF} } }
-const S = {set:loadSet(), period:"day", config:window.__CONFIG__ || {servers:[]}, server:null, data:null, iface:null, rows:[],
+function loadSet(){
+  try{
+    const o=JSON.parse(lsGet("vnstat:settings")||"{}")||{};
+    if (o.v!==3){ delete o.period; delete o.iface; delete o.range }      // new defaults (5 min, eth0) apply once to older saved views
+    return Object.assign({}, DEF, o, {v:3});
+  }catch(e){ return {...DEF} }
+}
+const S = {set:loadSet(), period:"fiveminute", fails:0, dismissed:false, config:window.__CONFIG__ || {servers:[]}, server:null, data:null, iface:null, rows:[],
            show:{rx:true,tx:true}, sort:{k:"t",d:-1}, donut:null, sel:null,
            stamp:0, stale:false, failing:false, err:"", inflight:null, ac:null, lastDone:0, nextAt:0, timer:0, cd:0};
 const saveSet = () => lsSet("vnstat:settings", JSON.stringify(S.set));
@@ -348,12 +382,15 @@ function ftick(b){                                           // axis ticks keep 
   const [n,u] = fmt(b,2,true).split(" ");
   return (n.includes(".") ? n.replace(/0+$/,"").replace(/\.$/,"") : n) + " " + u;
 }
-/* Download / Upload / Total shown in the total's unit, rounded first, so the three always add up. */
+/* Download / Upload / Total share one unit and are rounded before adding, so they always add up.
+   The unit is the total's, stepping down once (TiB -> GiB) when the smaller side would otherwise read 0.0x. */
 function trio(rx,tx){
   const {base,u}=UNITS(); let i=0, t=rx+tx; while (t>=base && i<u.length-1){ t/=base; i++ }
+  const sm=Math.min(rx,tx), lg=Math.max(rx,tx);
+  if (i>=4 && sm>0 && sm<0.5*Math.pow(base,i) && lg/Math.pow(base,i-1)<10000) i--;
   const dec=decFor(i,2), s=Math.pow(base,i), k=Math.pow(10,dec), r=v=>Math.round(v/s*k)/k;
-  const a=r(rx), b=r(tx), out=v=>v.toFixed(dec)+" "+u[i];
-  return [out(a),out(b),out(a+b)];
+  const a=r(rx), b=r(tx), out=v=>v.toLocaleString("en-US",{minimumFractionDigits:dec,maximumFractionDigits:dec})+" "+u[i];
+  return [out(a),out(b),out(+(a+b).toFixed(dec))];
 }
 const t12 = (h,m) => `${h%12||12}:${p2(m)}${h<12?"AM":"PM"}`;
 const h12 = h => `${h%12||12}${h<12?"AM":"PM"}`;
@@ -431,9 +468,9 @@ function floorSlot(p,t){
 const entryOf = (p,t) => { const d=new Date(t); return {date:{year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate()}, time:{hour:d.getHours(),minute:d.getMinutes()}} };
 function countSlots(p,a,b){ let n=0,t=a; while (t<=b && n<200000){ n++; t=addSlots(p,t,1) } return n }
 function buildSlots(p,all,want){
-  const map=new Map(all.map(e=>[ts(e),e]));
+  const map=new Map(all.map(e=>[floorSlot(p,ts(e)),e]));            // snap each bucket to its slot
   const nowF=floorSlot(p,Date.now());
-  const firstT=all.length?ts(all[0]):nowF, endT=Math.max(nowF,all.length?ts(all[all.length-1]):nowF);
+  const firstT=all.length?floorSlot(p,ts(all[0])):nowF, endT=Math.max(nowF,all.length?floorSlot(p,ts(all[all.length-1])):nowF);
   const total=countSlots(p,firstT,endT);
   const isAll=!want||want>=total;
   const slots=[]; let t=isAll?firstT:addSlots(p,endT,-(want-1));
@@ -655,7 +692,7 @@ function fillIfaces(){
   const sel=$("iface"), list=S.data?.interfaces||[];
   sel.innerHTML=list.map(i=>`<option value="${esc(i.name)}">${esc(ifaceLabel(i))}</option>`).join("");
   const want=S.set.iface[S.server];
-  S.iface=list.some(i=>i.name===want)?want:list[0]?.name;
+  S.iface=list.some(i=>i.name===want)?want:(list.find(i=>i.name==="eth0")||list[0])?.name;
   sel.value=S.iface||"";
 }
 
@@ -666,58 +703,67 @@ function toast(msg){
   const t=$("toast"); t.textContent=msg; t.classList.add("show");
   clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove("show"),1800);
 }
-function renderStatus(){
-  const dot=$("dot"), st=$("status");
-  st.title=S.stamp?"Last updated "+stampStr(new Date(S.stamp)):"";
-  if (S.failing){
-    dot.className="dot bad";
-    const when=S.stamp?` · last updated ${ago(S.stamp)}`:"";
-    if (S.inflight) st.textContent="Reconnecting…"+when;
-    else st.textContent=`Disconnected · retrying in ${Math.max(0,Math.ceil((S.nextAt-Date.now())/1000))}s`+when;
-    return;
+/* After POPUP_AFTER failed attempts (retried every RETRY_MS) a popup explains what's wrong; a small pill remains if dismissed. */
+const RETRY_MS=5000, POPUP_AFTER=3;
+function renderConn(){
+  const down=S.fails>=POPUP_AFTER, show=down&&!S.dismissed, box=$("conn");
+  $("offline").hidden=!down;
+  if (show){
+    $("conn-t").textContent=`Can’t reach ${srvCfg(S.server)?.name||"the server"}`;
+    $("conn-m").textContent=S.err||"The server isn’t responding.";
+    $("conn-r").textContent=S.inflight?"Reconnecting…":`Retrying in ${Math.max(0,Math.ceil((S.nextAt-Date.now())/1000))}s · attempt ${S.fails+1}`;
   }
-  if (!S.data){ dot.className="dot stale"; st.textContent="Loading…"; return }
-  dot.className=S.stale?"dot stale":"dot";
-  st.textContent=(S.stale?"Cached · ":"Updated ")+ago(S.stamp);
+  if (box.hidden===show) box.hidden=!show;
 }
 /* Polling (vnStat has no push channel): every 5s while disconnected, otherwise on the chosen interval. */
 function plan(){
   clearTimeout(S.timer); clearInterval(S.cd);
   if (S.failing){
-    S.nextAt=Date.now()+5000;
-    S.timer=setTimeout(()=>load(),5000);
-    S.cd=setInterval(renderStatus,1000);
+    S.nextAt=Date.now()+RETRY_MS;
+    S.timer=setTimeout(()=>load(),RETRY_MS);
+    S.cd=setInterval(renderConn,1000);
   } else if (S.set.refresh>0){
     S.timer=setTimeout(()=>{ if (document.hidden) plan(); else load() },S.set.refresh*1000);
   }
-  renderStatus();
+  renderConn();
 }
 function load(manual){
   if (S.inflight) return S.inflight;                                   // one request at a time
   if (manual && Date.now()-S.lastDone<3000){ toast("Already up to date"); return Promise.resolve() }
   const sid=S.server, ac=new AbortController(); S.ac=ac;
-  setBusy(true); renderStatus();
+  setBusy(true); renderConn();
   const p=(async()=>{
     try{
       const r=await fetch("api/vnstat?server="+encodeURIComponent(sid),{cache:"no-store",signal:ac.signal});
       let j; try{ j=await r.json() }catch(e){ throw new Error("HTTP "+r.status) }
       if (!r.ok||j.error||!j.interfaces) throw new Error(j.error||"HTTP "+r.status);
       if (sid!==S.server) return;
-      S.failing=false; S.err=""; S.stale=false; S.lastDone=Date.now();
-      $("err").hidden=true;
+      const wasDown=S.fails>=POPUP_AFTER;
+      S.failing=false; S.fails=0; S.dismissed=false; S.err=""; S.stale=false; S.lastDone=Date.now();
       apply(j,Date.now());
       lsSet(cacheKey(sid),JSON.stringify({t:S.stamp,data:j}));
+      if (wasDown) toast("Reconnected");
     }catch(e){
       if (e.name==="AbortError"||sid!==S.server) return;
-      S.failing=true; S.err=e.message; S.lastDone=Date.now();
-      $("err").textContent=`Can't load “${srvCfg(sid)?.name||sid}”: ${S.err}`; $("err").hidden=false;
+      S.failing=true; S.fails++; S.err=e.message; S.lastDone=Date.now();
     }finally{
       if (S.ac===ac){ S.inflight=null; setBusy(false); plan() }
     }
   })();
   S.inflight=p; return p;
 }
+/* 5-min and hourly buckets carry an exact epoch `timestamp`; show them in this browser's timezone so they line up
+   with "now" whatever timezone the server or vnStat host uses (including half-hour zones like India). */
+function normalize(j){
+  for (const itf of j.interfaces||[]) for (const k of ["fiveminute","hour"]) for (const e of (itf.traffic&&itf.traffic[k])||[]){
+    if (!e.timestamp) continue;
+    const d=new Date(e.timestamp*1000);
+    e.date={year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate()};
+    e.time={hour:d.getHours(),minute:d.getMinutes()};
+  }
+}
 function apply(j,t){
+  normalize(j);
   S.data=j; S.stamp=t;
   $("ver").textContent=j.vnstatversion?"v"+j.vnstatversion:"";
   fillIfaces(); render();
@@ -728,12 +774,12 @@ function switchServer(id){
   if (S.ac) S.ac.abort();
   S.inflight=null; S.ac=null; clearTimeout(S.timer);
   S.server=id; S.set.server=id; saveSet();
-  S.data=null; S.failing=false; S.sel=null; S.stale=false; S.lastDone=0;
-  $("err").hidden=true; $("server").value=id;
+  S.data=null; S.failing=false; S.fails=0; S.dismissed=false; S.sel=null; S.stale=false; S.lastDone=0;
+  $("server").value=id;
   setBusy(false);
   let c=null; try{ c=JSON.parse(lsGet(cacheKey(id))||"null") }catch(e){}
   if (c&&c.data){ S.stale=true; apply(c.data,c.t) }
-  else { document.body.classList.remove("ready"); renderStatus() }
+  else { document.body.classList.remove("ready"); renderConn() }
   load();
 }
 
@@ -802,7 +848,7 @@ function render(){
     : "No data yet";
   $("lgap").hidden=!G.missing;
 
-  cards(itf,rows); lifetime(itf);
+  nowCard(itf); lifetime(itf); kpis(rows);
 
   const ser=["rx","tx"].filter(k=>S.show[k]).map(k=>({key:k,c:"--"+k}));
   const tp=f=>r=>r.has ? f(r) : tip(r.label,[],r.missing?"No data recorded for this period":"Waiting for data…");
@@ -849,23 +895,58 @@ function weekPattern(tr){
   return s.map((x,i)=>({short:DOW[i],label:DOW[i],v:{rx:x.n?x.rx/x.n:0,tx:x.n?x.tx/x.n:0}}));
 }
 
-function cards(itf,rows){
+const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MONL=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function bitrate(bps){
+  const u=["bit/s","Kbit/s","Mbit/s","Gbit/s"]; let i=0; while (bps>=1000&&i<3){ bps/=1000; i++ }
+  return (i===0||bps>=100?bps.toFixed(0):bps.toFixed(1))+" "+u[i];
+}
+/* The present period for the selected tab: today for Daily, this month for Monthly, this hour for Hourly, ... */
+function nowCard(itf){
+  const el=$("now"); el.classList.remove("skel");
+  const p=S.period; if (!p){ el.innerHTML=""; return }
+  const list=itf.traffic[p]||[], map=new Map(list.map(e=>[floorSlot(p,ts(e)),e]));
+  const t0=floorSlot(p,Date.now()), t1=addSlots(p,t0,1), cur=map.get(t0), prev=map.get(addSlots(p,t0,-1));
+  const d0=new Date(t0), d1=new Date(t1);
+  const N={fiveminute:["Current 5 minutes","Previous 5 minutes"],hour:["This hour","Previous hour"],day:["Today","Yesterday"],month:["This month","Last month"],year:["This year","Last year"]}[p];
+  const dd={year:d0.getFullYear(),month:d0.getMonth()+1,day:d0.getDate()};
+  const when = p==="day" ? `${WD[d0.getDay()]}, ${dstr(dd)}` : p==="month" ? `${MONL[d0.getMonth()]} ${d0.getFullYear()}` : p==="year" ? String(d0.getFullYear())
+    : `${dstr(dd)} · ${t12(d0.getHours(),d0.getMinutes())} – ${t12(d1.getHours(),d1.getMinutes())}`;
+  let body;
+  if (cur){
+    const [a,b,t]=trio(cur.rx,cur.tx), tot=cur.rx+cur.tx, pr=tot?cur.rx/tot*100:50;
+    const secs=Math.min((t1-t0)/1000,Math.max(60,(Date.now()-t0)/1000));
+    body=`<div class="nbig"><b>${t}</b><span class="mut">total so far</span></div>`+
+      `<div class="lbar" role="img" aria-label="Download ${pr.toFixed(0)}%, upload ${(100-pr).toFixed(0)}%"><i style="width:${pr}%;background:var(--rx)"></i><i style="flex:1;background:var(--tx)"></i></div>`+
+      `<div class="ngrid"><div><small><i style="background:var(--rx)"></i>Download</small><b>${a}</b></div>`+
+      `<div><small><i style="background:var(--tx)"></i>Upload</small><b>${b}</b></div>`+
+      `<div><small>Avg speed</small><b>${bitrate(tot*8/secs)}</b></div>`+
+      `<div><small>${N[1]}</small><b>${prev?fmt(prev.rx+prev.tx):"—"}</b></div></div>`;
+  } else {
+    const last=list.reduce((m,e)=>!m||ts(e)>ts(m)?e:m,null);
+    body=`<div class="nbig"><b>—</b><span class="mut">No data recorded yet</span></div>`+
+      (last?`<div class="mut nlast">Latest record: ${esc(label(last,p,true))}</div>`:"")+
+      `<div class="ngrid"><div><small>${N[1]}</small><b>${prev?fmt(prev.rx+prev.tx):"—"}</b></div></div>`;
+  }
+  el.innerHTML=`<div class="nh"><span class="kick">${N[0]}</span><span class="mut">${esc(when)}</span></div>`+body;
+}
+
+/* Stats for the whole chart range, shown inside the Traffic panel they describe. */
+function kpis(rows){
   const rec=rows.filter(r=>r.has), n=rec.length||1, miss=rows.filter(r=>r.missing).length;
   const rx=rec.reduce((a,r)=>a+r.v.rx,0), tx=rec.reduce((a,r)=>a+r.v.tx,0);
   const peak=rec.reduce((m,r)=>r.v.tot>m.v.tot?r:m,{v:{tot:0},label:"–"});
   const [da,ua,ta]=trio(rx,tx), per=S.period==="fiveminute"?"5 min":S.period;
-  const c=[
-    ["rx","Download",da,"in selected range"],
-    ["tx","Upload",ua,"in selected range"],
-    ["","Total",ta,spanText(S.period,rows.length||0)+(miss?` · ${rec.length} recorded`:"")],
-    ["","Average",fmt((rx+tx)/n),`per ${per}${miss?" recorded":""}`],
-    ["","Peak",fmt(peak.v.tot),peak.label]
-  ];
-  $("cards").innerHTML=c.map(([k,a,b,s])=>`<div class="card ${k}"><small>${a}</small><b>${b}</b><span>${esc(s)}</span></div>`).join("");
+  $("kpis").innerHTML=`<div class="selgrid">`+
+    `<div><small><i style="background:var(--rx)"></i>Download</small><b>${da}</b></div>`+
+    `<div><small><i style="background:var(--tx)"></i>Upload</small><b>${ua}</b></div>`+
+    `<div><small>Total</small><b>${ta}</b><span>${spanText(S.period,rows.length||0)}${miss?` · ${rec.length} recorded`:""}</span></div>`+
+    `<div><small>Average</small><b>${fmt((rx+tx)/n)}</b><span>per ${per}${miss?" recorded":""}</span></div>`+
+    `<div><small>Peak</small><b>${fmt(peak.v.tot)}</b><span>${esc(peak.label)}</span></div></div>`;
 }
 
-/* All-time totals barely change between views, so they live in their own quiet strip instead of a stat card. */
+/* All-time totals barely change between views, so they sit apart on the right. */
 function lifetime(itf){
+  const el=$("life"); el.classList.remove("skel");
   const lt=itf.traffic.total||{rx:0,tx:0}, tot=lt.rx+lt.tx, [a,b,t]=trio(lt.rx,lt.tx);
   const c=itf.created&&itf.created.date; let since="";
   if (c&&c.year){
@@ -873,10 +954,10 @@ function lifetime(itf){
     since=`Tracking since ${dstr(cd)} · ≈ ${fmt(tot/days)} per day`;
   }
   const pr=tot?lt.rx/tot*100:50;
-  $("life").innerHTML=
-    `<div><small>All-time · ${esc(ifaceLabel(itf))}</small><b>${t}</b>${since?`<span class="mut">${esc(since)}</span>`:""}</div>`+
-    `<div><div class="lbar" role="img" aria-label="Download ${pr.toFixed(1)}%, upload ${(100-pr).toFixed(1)}%"><i style="width:${pr}%;background:var(--rx)"></i><i style="flex:1;background:var(--tx)"></i></div>`+
-    `<div class="lk"><span><i style="background:var(--rx)"></i>Download <b>${a}</b> ${pr.toFixed(1)}%</span><span><i style="background:var(--tx)"></i>Upload <b>${b}</b> ${(100-pr).toFixed(1)}%</span></div></div>`;
+  el.innerHTML=`<span class="kick">All-time · ${esc(ifaceLabel(itf))}</span>`+
+    `<div class="nbig"><b>${t}</b></div>`+(since?`<div class="mut" style="font-size:12px">${esc(since)}</div>`:"")+
+    `<div class="lbar" role="img" aria-label="Download ${pr.toFixed(1)}%, upload ${(100-pr).toFixed(1)}%" style="margin-top:auto"><i style="width:${pr}%;background:var(--rx)"></i><i style="flex:1;background:var(--tx)"></i></div>`+
+    `<div class="lk"><span><i style="background:var(--rx)"></i>Download <b>${a}</b> ${pr.toFixed(1)}%</span><span><i style="background:var(--tx)"></i>Upload <b>${b}</b> ${(100-pr).toFixed(1)}%</span></div>`;
 }
 
 function table(){
@@ -913,6 +994,9 @@ $("ranges").addEventListener("click",e=>{
 $("server").onchange=e=>switchServer(e.target.value);
 $("iface").onchange=e=>{ S.iface=e.target.value; S.set.iface[S.server]=S.iface; saveSet(); S.sel=null; render(); drawAll() };
 $("reload").onclick=()=>load(true);
+$("conn-retry").onclick=()=>{ S.lastDone=0; load() };
+$("conn-x").onclick=()=>{ S.dismissed=true; renderConn() };
+$("offline").onclick=()=>{ S.dismissed=false; renderConn() };
 for (const k of ["rx","tx"]) $("l"+k).onclick=()=>{ S.show[k]=!S.show[k]; $("l"+k).classList.toggle("off",!S.show[k]); render() };
 function syncMode(){ $("mstack").classList.toggle("on",S.set.mode==="stack"); $("mline").classList.toggle("on",S.set.mode==="line") }
 for (const [id,m] of [["mstack","stack"],["mline","line"]]) $(id).onclick=()=>{ S.set.mode=m; saveSet(); syncMode(); render() };
@@ -937,7 +1021,7 @@ function buildThemes(){
 function buildServers(){
   $("srvlist").innerHTML=D.servers.map((s,i)=>
     `<div class="srv"><input type="text" class="n" data-i="${i}" value="${esc(s.name)}" placeholder="Name" aria-label="Server name">`+
-    `<input type="text" class="u" data-i="${i}" value="${esc(s.url)}" placeholder="/data/vnstat.db  or  http://host:8685/json.cgi" aria-label="Database path or URL" spellcheck="false" autocapitalize="off">`+
+    `<input type="text" class="u" data-i="${i}" value="${esc(s.url)}" placeholder="/var/lib/vnstat/vnstat.db  or  http://host:8685/json.cgi" aria-label="Database path or URL" spellcheck="false" autocapitalize="off">`+
     `<button class="btn x" data-i="${i}" title="Remove" aria-label="Remove server"${D.servers.length<2?" disabled":""}>✕</button></div>`).join("");
   buildIfaces();
 }
@@ -1008,8 +1092,7 @@ $("save-cfg").onclick=async()=>{
     let c=null; try{ c=JSON.parse(lsGet(cacheKey(S.server))||"null") }catch(e){}
     if (c&&c.data){ S.stale=true; apply(c.data,c.t) }
   }
-  renderStatus();
-  setInterval(()=>{ if (!document.hidden && !S.failing) renderStatus() },15000);   // wording only changes once a minute
+  renderConn();
   load();
 })();
 </script>
